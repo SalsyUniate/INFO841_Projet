@@ -1,38 +1,81 @@
-from simple_websocket_server import WebSocketServer, WebSocket 
-import simple_http_server
-import http.server
-import urllib 
-import socket as sk
-PORT_website = 80
-PORT_firefox = 5454
+import signal
+import socket
+import threading
+
+port = 5454
 
 
-#création socket 
+class Server : 
+    def __init__(self, config = None):
+        
+        self.shutdown = 0
+        signal.signal(signal.SIGINT, self.shutdown)
+        # creating the socket 
+        self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #making the socket reusdown able 
+        self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        
+        #binding socket to host and port 
+        #self.serverSocket.bind((config['localhost'], config[port]))
+        self.serverSocket.bind(('localhost', port))
+        
+        self.serverSocket.listen(10)
+        self.__clients = {}
+        
+        
+        
+        
+        
+        
+        
+        # accepting client 
+        
+        print("Waiting connection...")
+        while True :
+            (clientSocket, client_address) = self.serverSocket.accept()
+            thread = threading.Thread(#name=self._getClientName(client_address), 
+                                      target=self.proxy_thread, 
+                                      args = (clientSocket, client_address))
+            thread.setDaemon(True)
+            thread.start()
+            
 
-web_socket = sk.socket(sk.AF_INET, sk.SOCK_STREAM)
-# reuse socket after crash (don't wait 1 min)
-web_socket.setsockopt(sk.SOL_SOCKET, sk.SO_REUSEADDR, 1)
 
-url = "info.cern.ch"
-req = f"GET / HTTP/1.1\r\nHost:{url}\r\n\r\n"
-web_socket.connect((url, PORT_website))
-print("connected")
-web_socket.send(bytes(req, 'utf-8')) 
-#pour send il faut obligatoirement mettre des bytes en argment dont soit 
-#on encode comme ça soit on met direct une chaîne de charaactères en bytes
-print("sent")
-result = web_socket.recv(99999)
-print(result)
+    def proxy_thread(self, clientSocket, client_address):
+        print("New connection !")
+        
+        #redirection of the request 
 
+        request = str(clientSocket.recv(4096))
+        # print(request)
+        # print(type(request))
+        #request = bytes(request, 'utf-8')
+                
+        # parse the first line
+        first_line = request.split('\n')[0]
+        # print(first_line)
+        # get url
+        url = first_line.split(' ')[1]
+        #url2 = 'info.cern.ch'
+        url2 = url.replace('http://', '')
+        url2 = url2[:-1]
+        
+    
+        self.threadSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.threadSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.threadSocket.connect((url2, 80))
+        req = f"GET / HTTP/1.1\r\nHost:{url2}\r\n\r\n"
+        self.threadSocket.send(bytes(req, 'utf-8'))
+        print("Request sent")
+        result = self.threadSocket.recv(4096)
+        # print(result)  
+        
+        clientSocket.send(result)
+        print("FIN THREAD")
+              
 
-
-# création socket du navigateur 
-
-browser_socket = sk.socket(sk.AF_INET, sk.SOCK_STREAM)
-# reuse socket after crash (don't wait 1 min)
-browser_socket.setsockopt(sk.SOL_SOCKET, sk.SO_REUSEADDR, 1)
-
-browser_socket.bind(('', PORT_firefox))
-browser_socket.listen() # TODO il faut attendre qu'il y ait une connction et l'accepter avant de recv
-result2 = browser_socket.recv(9999)
-print(result2)
+        
+        
+myServer = Server()
+        
+        
