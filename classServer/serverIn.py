@@ -1,13 +1,14 @@
 import signal
 import socket
 import threading
-
+import rsa 
 
 class ServerIn : 
-    def __init__(self, port_in, port_out):
+    def __init__(self, port_in, port_out):   
         
         self.shutdown = 0
         signal.signal(signal.SIGINT, self.shutdown)
+        
         
         # creating socket and making it reusable
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -20,17 +21,37 @@ class ServerIn :
         self.serverSocket.listen(10)
         
         
+        # # generating encryption keys 
+        # (public_key, private_key) = rsa.newkeys(512)
+        # (print("public in :"))
+        # print(public_key)
+        # # print(private_key) 
+        
+        # self.rsaSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self.rsaSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # self.rsaSocket.connect(('localhost', port_out))
+        # self.rsaSocket.send(public_key, 'utf-8')
+        # out_key = self.rsaSocket.recv(4096)
+        # print('public out :')
+        # print(out_key)
         
         
+        
+
         
         ### accepting clients 
         
         print("IN : Waiting connection...")
+        id_thread = 1
         while True :
             (clientSocket, client_address) = self.serverSocket.accept()
             # making thread correspondig to the request 
             thread = threading.Thread(target=self.proxy_thread, 
-                                      args = (clientSocket, client_address, port_out))
+                                      args = (clientSocket,
+                                              client_address,
+                                              port_out,
+                                              id_thread))
+            id_thread += 1
             thread.setDaemon(True)
             thread.start()
             
@@ -40,8 +61,9 @@ class ServerIn :
 
     ### execution of the thread
     
-    def proxy_thread(self, clientSocket, client_address, port_out):
-        print("IN : New connection!")
+    def proxy_thread(self, clientSocket, client_address, port_out, id):
+        
+        print("IN : New connection (id : {})!".format(id))
         request = str(clientSocket.recv(4096))
         
         # parse the first line
