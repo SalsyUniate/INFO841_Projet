@@ -19,8 +19,11 @@ bytes_test = [str.encode(test[0]), str.encode(test[1])]
 #     print(i)
 
 # reconversion en public key classique...
-float_test = [float(str(bytes_test[0])[2:-1]), float(str(bytes_test[1])[2:-1])]
+float_test = [int(str(bytes_test[0])[2:-1]), int(str(bytes_test[1])[2:-1])]
 print(float_test)
 new_public_key = rsa.PublicKey(float_test[0], float_test[1])
 print(new_public_key)
-    
+
+bidule = [b'445667', b'45']
+publicKey = rsa.PublicKey(bidule[0], bidule[1])
+print(publicKey)
