@@ -122,7 +122,7 @@ class ServerOut :
         # sending answer to client 
         for n in range (len(masqued_result)):
             clientSocket.send(masqued_result[n])
-            sleep(0.5)
+            sleep(0.05)
         # sleep(1.7)
         clientSocket.send(b'END')
         print("  Thread {}: Response sent to client proxy".format(id))

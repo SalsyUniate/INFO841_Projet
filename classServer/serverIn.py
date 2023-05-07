@@ -3,6 +3,7 @@ import socket
 import threading
 import rsa 
 from time import sleep
+from time import time
 
 class ServerIn : 
     def __init__(self, port_in, port_out, port_rsa): 
@@ -76,10 +77,6 @@ class ServerIn :
             id_thread += 1
             thread.setDaemon(True)
             thread.start()
-            # if id_thread > 1 :
-            #     self.serverSocket.close()
-            
-
 
 
 
@@ -87,6 +84,7 @@ class ServerIn :
     
     def proxy_thread(self, clientSocket, port_out, id, server_keys, out_key):
         
+        start = time()
         print("New connection (id : {})!".format(id))
         request = str(clientSocket.recv(4096))
         print("  Thread {}: Request received".format(id))
@@ -114,7 +112,7 @@ class ServerIn :
         
         masqued_result = []
         end_bool = False
-        print("debut while")
+        # print("debut while")
         while not end_bool:
             new = self.threadSocket.recv(4096) 
             # print(new)
@@ -124,8 +122,8 @@ class ServerIn :
         # masqued_result = self.threadSocket.recv(4096) # recieving answer from web server 
         # print(result) 
         
-        print("fin while")
-        print(len(masqued_result))
+        # print("fin while")
+        # print(len(masqued_result))
         # print('\n')
         # print(masqued_result) 
         
@@ -139,8 +137,11 @@ class ServerIn :
         print(len(clear_result))
         # sending answer to client 
         # clientSocket.send(bytes(clear_result, 'utf-8'))
+        end = time()
+        response_time = 100
+        
         clientSocket.send(bytes(clear_result, 'utf-8'))
-        print("  Thread {}: Response sent to client".format(id))
+        print("  Thread {}: Response sent to client ({})".format(id, end - start))
         print("Closing thread {}".format(id))
         
         
