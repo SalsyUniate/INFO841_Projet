@@ -87,8 +87,6 @@ class ServerOut :
 
 
 
-    ### execution of the thread
-    
     def proxy_thread(self, clientSocket, port_web, id, server_keys, in_key):
         print("New connection (id : {})!".format(id))
         request = clientSocket.recv(4096)
@@ -102,28 +100,24 @@ class ServerOut :
         
         self.threadSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.threadSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.threadSocket.connect((request, port_web)) # connecting socket with web port
-        req = f"GET / HTTP/1.1\r\nHost:{request}\r\n\r\n" # creating new request 
-        self.threadSocket.send(bytes(req, 'utf-8')) # sending new request 
+        self.threadSocket.connect((request, port_web))
+        req = f"GET / HTTP/1.1\r\nHost:{request}\r\n\r\n"
+        self.threadSocket.send(bytes(req, 'utf-8'))
         print("  Thread {}: Request sent to web server".format(id))
-        result = self.threadSocket.recv(4096) # recieving answer from web server
-        # print(result) 
-        print(len(str(result)) - 3)
-        # masqued_result = rsa.encrypt(result, in_key)
-        # print(result)  
+        result = self.threadSocket.recv(4096)
+
         
         masqued_result = []
         for n in range(0, len(result), 53):
             part = result[n:n+53]
             masqued_result.append(rsa.encrypt(part, in_key))
             
-        # print(len(masqued_result))
         
         # sending answer to client 
         for n in range (len(masqued_result)):
             clientSocket.send(masqued_result[n])
-            sleep(0.05)
-        # sleep(1.7)
+            sleep(0.0005)
+            
         clientSocket.send(b'END')
         print("  Thread {}: Response sent to client proxy".format(id))
         print("Closing thread {}".format(id))

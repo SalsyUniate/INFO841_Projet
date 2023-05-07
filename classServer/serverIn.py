@@ -52,8 +52,6 @@ class ServerIn :
         int_out_key = [int(str(bytes_out_key[0])[2:-1]),
                       int(str(bytes_out_key[1])[2:-1])]
         out_key = rsa.PublicKey(int_out_key[0], int_out_key[1])
-        # print('out_key :')
-        # print(out_key)
         
         self.rsaSocket.close()
         
@@ -79,8 +77,6 @@ class ServerIn :
             thread.start()
 
 
-
-    ### execution of the thread
     
     def proxy_thread(self, clientSocket, port_out, id, server_keys, out_key):
         
@@ -100,48 +96,37 @@ class ServerIn :
     
     
         ### creation of the thread socket 
-        
         self.threadSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.threadSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.threadSocket.connect(('localhost', port_out)) # connecting socket with web port
+        self.threadSocket.connect(('localhost', port_out))
         
-        masqued_url = rsa.encrypt(url.encode('ascii'), out_key)
-        # self.threadSocket.send(bytes(url, 'utf-8')) # sending new request 
+        masqued_url = rsa.encrypt(url.encode('ascii'), out_key) 
         self.threadSocket.send(masqued_url)
         print("  Thread {}: Request sent to web proxy".format(id))
         
         masqued_result = []
         end_bool = False
-        # print("debut while")
         while not end_bool:
             new = self.threadSocket.recv(4096) 
-            # print(new)
             if new == b'END':
                 end_bool = True
             else : masqued_result.append(new)
-        # masqued_result = self.threadSocket.recv(4096) # recieving answer from web server 
-        # print(result) 
-        
-        # print("fin while")
-        # print(len(masqued_result))
-        # print('\n')
-        # print(masqued_result) 
-        
+
+
         clear_result = ''
         for n in range(len(masqued_result)):
-            # print(str(rsa.decrypt(masqued_result[n], server_keys[1])))
             clear_result += str(rsa.decrypt(masqued_result[n], server_keys[1]))[2:-1]
-            
-        # print('\n\n\n' + clear_result)
-        print("decrypté")
-        print(len(clear_result))
+           
+        clear_result = clear_result.replace("\\n", "\n")
+        clear_result = clear_result.replace("\\r", "\r")
+         
         # sending answer to client 
-        # clientSocket.send(bytes(clear_result, 'utf-8'))
-        end = time()
-        response_time = 100
-        
         clientSocket.send(bytes(clear_result, 'utf-8'))
-        print("  Thread {}: Response sent to client ({})".format(id, end - start))
+        
+        end = time()
+        response_time = round((end-start)*1000)/1000
+        
+        print("  Thread {}: Response sent to client ({} s)".format(id, response_time))
         print("Closing thread {}".format(id))
         
         
