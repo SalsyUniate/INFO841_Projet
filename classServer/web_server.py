@@ -78,7 +78,7 @@ class WebServer :
                             str.encode(str_public_key[1])]
 
         self.rsa_connected.send(bytes_public_key[0])
-        sleep(2)
+        sleep(1)
         self.rsa_connected.send(bytes_public_key[1])
 
 

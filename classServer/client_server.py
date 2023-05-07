@@ -70,9 +70,9 @@ class ClientServer:
         self.rsa_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.rsa_socket.connect(('localhost', port_rsa))
 
-        sleep(2)
+        sleep(1)
         self.rsa_socket.send(bytes_public_key[0])
-        sleep(2)
+        sleep(1)
         self.rsa_socket.send(bytes_public_key[1])
         bytes_out_key = [self.rsa_socket.recv(4096)]
         bytes_out_key.append(self.rsa_socket.recv(4096))
