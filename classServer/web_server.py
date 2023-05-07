@@ -119,7 +119,7 @@ class WebServer :
 
 
         # sending answer to client
-        for part in range (enumerate(masqued_result)):
+        for part in enumerate(masqued_result):
             client_socket.send(masqued_result[part[0]])
             sleep(0.0005)
 

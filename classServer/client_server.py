@@ -18,7 +18,6 @@ class ClientServer:
     def __init__(self, port_in, port_out, port_rsa):
 
         print("Starting client proxy server...")
-        print(self.proxy_thread.__code__.co_varnames)
 
         self.shutdown = 0
         signal.signal(signal.SIGINT, self.shutdown)
