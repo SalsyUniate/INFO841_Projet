@@ -6,6 +6,7 @@ import signal
 import socket
 import threading
 from time import sleep
+from time import time
 import rsa
 
 
@@ -87,9 +88,9 @@ class ClientServer:
         self.rsa_socket.connect(('localhost', socket_rsa))
 
         # send public key to web proxy
-        sleep(1)
+        sleep(0.05)
         self.rsa_socket.send(bytes_public_key[0])
-        sleep(1)
+        sleep(0.05)
         self.rsa_socket.send(bytes_public_key[1])
 
         # receiving web proxy public key
@@ -117,13 +118,18 @@ class ClientServer:
         No returns
         """
 
+        t_request_received = time()
+
         print(f"New connection (id : {id_thread})!")
         request = str(client_socket.recv(4096))
         print(f"  Thread {id_thread}: Request received")
 
         # parse the first line
         first_line = request.split('\n', maxsplit=1)[0]
-        url = first_line.split(' ')[1].replace('http://', '')[:-1]
+        url = first_line.split(' ')[1].replace('http://', '')
+        # remove the final '/' if there is one
+        if url[-1] == '/' :
+            url = url[:-1]
 
         # creation of the thread socket
         thread_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -131,8 +137,11 @@ class ClientServer:
         thread_socket.connect(('localhost', socket_out))
 
         # encrypt request and send it to the web proxy
+        t_encrytion_starting = time()
         masqued_url = rsa.encrypt(url.encode('ascii'), self.web_proxy_key)
+        t_encryption_ended = time()
         thread_socket.send(masqued_url)
+        t_encryption = round(1000*(t_encryption_ended - t_encrytion_starting))
         print(f"  Thread {id_thread}: Request sent to web proxy")
 
         # receiving response from web proxy
@@ -146,6 +155,7 @@ class ClientServer:
             else : masqued_result.append(new)
 
         # decrypt response from web proxy
+        t_decryption_starting = time()
         clear_result = ''
         for part in enumerate(masqued_result):
             clear_result += str(rsa.decrypt(masqued_result[part[0]], self.private_key))[2:-1]
@@ -154,9 +164,20 @@ class ClientServer:
         clear_result = clear_result.replace("\\n", "\n")
         clear_result = clear_result.replace("\\r", "\r")
 
+        t_decryption_ended = time()
+
         # sending answer to client
         client_socket.send(bytes(clear_result, 'utf-8'))
+        t_decryption = round(1000*(t_decryption_ended - t_decryption_starting))
 
         # ending thread
+        t_request_handled = time()
+        t_request = round(1000*(t_request_handled - t_request_received))
         print(f"  Thread {id_thread}: Response sent to client")
-        print(f"Closing thread {id_thread}")
+        print(f"  Thread {id_thread}: Writing time logs")
+        with open("logs/client_logs.txt", "a", encoding="utf-8") as file :
+            file.write(f"Thread {id_thread} time logs\n")
+            file.write(f"   Total time : {t_request} ms\n")
+            file.write(f"   Encryption time : {t_encryption} ms\n")
+            file.write(f"   Decryption time : {t_decryption} ms\n\n")
+        print(f"Closing thread {id_thread} ")

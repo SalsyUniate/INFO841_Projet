@@ -6,6 +6,7 @@ import signal
 import socket
 import threading
 from time import sleep
+from time import time
 import rsa
 
 
@@ -99,7 +100,7 @@ class WebServer :
 
         # send public key to client proxy
         self.rsa_connected.send(bytes_public_key[0])
-        sleep(1)
+        sleep(0.05)
         self.rsa_connected.send(bytes_public_key[1])
 
         # convert web proxy public key in rsa.PublicKey
@@ -123,34 +124,47 @@ class WebServer :
         No returns
         """
 
+        t_request_received = time()
+
         print(f"New connection (id : {id_thread})!")
         request = client_socket.recv(4096)
         print(f"  Thread {id_thread}: Request received")
 
         # decrypt request from client proxy
+        t_decryption_starting = time()
         request = str(rsa.decrypt(request, self.private_key))
         request = request.replace("b'", "")
         request = request.replace("'", "")
+        t_decryption_ended = time()
+        t_decryption = round(1000*(t_decryption_ended - t_decryption_starting))
+
+        host_name, req_list = request.split('/', maxsplit=1)[0], request.split('/')[1:]
+        req = host_name
+        for i in req_list :
+            req = req + i
 
         # creation of the thread socket
         thread_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         thread_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        thread_socket.connect((request, port_web))
+        thread_socket.connect((host_name, port_web))
 
         # build a new request for web server and send it
-        req = f"GET / HTTP/1.1\r\nHost:{request}\r\n\r\n"
+        req = f"GET / HTTP/1.1\r\nHost:{req}\r\n\r\n"
         thread_socket.send(bytes(req, 'utf-8'))
         print(f"  Thread {id_thread}: Request sent to web server")
 
-        # get respinse from web server
+        # get response from web server
         result = thread_socket.recv(4096)
 
         # encrypt response from web server
+        t_encyption_starting = time()
         masqued_result = []
         for index in range(0, len(result), 53):
             part = result[index:index+53]
             # doing by step because size is limited in rsa.encrypt
             masqued_result.append(rsa.encrypt(part, self.client_proxy_key))
+        t_encryption_ended = time()
+        t_encryption = round(1000*(t_encryption_ended - t_encyption_starting))
 
         # sending answer to client proxy
         for part in enumerate(masqued_result):
@@ -161,5 +175,13 @@ class WebServer :
         client_socket.send(b'END')
 
         # ending thread
+        t_request_handled = time()
+        t_request = round(1000*(t_request_handled - t_request_received))
         print(f"  Thread {id_thread}: Response sent to client proxy")
+        print(f"  Thread {id_thread}: Writing time logs")
+        with open("logs/web_logs.txt", "a", encoding="utf-8") as file :
+            file.write(f"Thread {id_thread} time logs\n")
+            file.write(f"   Total time : {t_request} ms\n")
+            file.write(f"   Encryption time : {t_encryption} ms\n")
+            file.write(f"   Decryption time : {t_decryption} ms\n\n")
         print(f"Closing thread {id_thread}")
